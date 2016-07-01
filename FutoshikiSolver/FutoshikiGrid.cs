@@ -91,9 +91,10 @@ namespace FutoshikiSolver
             }
             
             while (HasEmptyCells && Attempts++ < 100) { 
-                LogMessage($"Attempt {Attempts}");                            
                 TryAddingMaximumNumberToEachRow();
                 TryAddingMinimumNumberToEachRow();
+                TrySolvingForEachRow();
+                TrySolvingForEachColumn();
                 TrySolvingForEachCell();
             }
 
@@ -266,6 +267,22 @@ namespace FutoshikiSolver
             }
         }
 
+        private void TrySolvingForEachRow()
+        {
+            for (var row = 0; row < GridSize; row++)
+            {
+                TrySolvingForRow(row);
+            }
+        }
+
+        private void TrySolvingForEachColumn()
+        {
+            for (var col = 0; col < GridSize; col++)
+            {
+                TrySolvingForColumn(col);
+            }
+        }
+
         private void TrySolvingForEachCell()
         {
             for (var row = 0; row < GridSize; row++)
@@ -276,129 +293,177 @@ namespace FutoshikiSolver
                     {
                         continue;
                     }
-                    var potentialMatches = Enumerable.Range(1, GridSize).ToList(); // These are all the values the cell could be.
 
-                    var potentialMatchesForCell = Enumerable.Range(1, GridSize).ToList(); // We'll try whittling these down until there's only one remaining.
-                    foreach (var potentialMatch in potentialMatches)
-                    {
-                        // If the row or column already has a value it can be removed from the list.
-                        if (RowHasNumber(row, potentialMatch) || ColHasNumber(col, potentialMatch))
-                        {
-                            potentialMatchesForCell.Remove(potentialMatch);
-                        }
-                    }
-
-                    // If there are any inequalities pointing to the cell and a number on the other side then we can remove the ineligible values.
-                    if ((row > 0) && InequalityAboveIsLessThan(row, col))
-                    {
-                        if (CellIsEmpty(row - 1, col))
-                        {
-                            RemoveMatchingLargerValuesFromColumn(col, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row - 1, col];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
-                        }
-
-                    }
-
-                    if ((row > 0) && InequalityAboveIsGreaterThan(row, col))
-                    {
-                        if (CellIsEmpty(row - 1, col))
-                        {
-                            RemoveMatchingSmallerValuesFromColumn(col, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row - 1, col];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
-                        }
-                    }
-
-                    if ((row < MaxIndex) && InequalityBelowIsLessThan(row, col))
-                    {
-                        if (CellIsEmpty(row + 1, col))
-                        {
-                            RemoveMatchingLargerValuesFromColumn(col, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row + 1, col];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
-                        }
-                    }
-
-                    if ((row < MaxIndex) && InequalityBelowIsGreaterThan(row, col))
-                    {
-                        if (CellIsEmpty(row + 1, col))
-                        {
-                            RemoveMatchingSmallerValuesFromColumn(col, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row + 1, col];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
-                        }
-                    }
-
-                    if ((col > 0) && InequalityBeforeIsLessThan(row, col))
-                    {
-                        if (CellIsEmpty(row, col - 1))
-                        {
-                            RemoveMatchingLargerValuesFromRow(row, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row, col - 1];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
-                        }
-                    }
-
-                    if ((col > 0) && InequalityBeforeIsGreaterThan(row, col))
-                    {
-                        if (CellIsEmpty(row, col - 1))
-                        {
-                            RemoveMatchingSmallerValuesFromRow(row, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row, col - 1];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
-                        }
-                    }
-
-                    if ((col < MaxIndex) && InequalityAfterIsLessThan(row, col))
-                    {
-                        if (CellIsEmpty(row, col + 1))
-                        {
-                            RemoveMatchingLargerValuesFromRow(row, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row, col + 1];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
-                        }
-                    }
-                    if ((col < MaxIndex) && InequalityAfterIsGreaterThan(row, col))
-                    {
-                        if (CellIsEmpty(row, col + 1))
-                        {
-                            RemoveMatchingSmallerValuesFromRow(row, potentialMatchesForCell);
-                        }
-                        else
-                        {
-                            var valueToCompare = Numbers[row, col + 1];
-                            potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
-                        }
-                    }
-                    
+                    var potentialMatchesForCell = GetPotentialMatchesForCell(row, col);
                     if (potentialMatchesForCell.Count == 1)
                     {
                        SetCell(row, col, potentialMatchesForCell[0]);
                     }
                 }
             }
+        }
+
+        private void TrySolvingForRow(int row)
+        {
+            for (var val = 1; val <= GridSize; val++)
+            {
+                var potentialMatchingColumns = new List<int>();
+                for (var col = 0; col < GridSize; col++)
+                {
+                    if (GetPotentialMatchesForCell(row, col).Contains(val))
+                    {
+                        potentialMatchingColumns.Add(col);
+                    }
+                }
+                if (potentialMatchingColumns.Count == 1)
+                {
+                    SetCell(row, potentialMatchingColumns[0], val);
+                }
+            }
+        }
+
+        private void TrySolvingForColumn(int col)
+        {
+            for (var val = 1; val <= GridSize; val++)
+            {
+                var potentialMatchingRows = new List<int>();
+                for (var row = 0; row < GridSize; row++)
+                {
+                    if (GetPotentialMatchesForCell(row, col).Contains(val))
+                    {
+                        potentialMatchingRows.Add(row);
+                    }
+                }
+                if (potentialMatchingRows.Count == 1)
+                {
+                    SetCell(potentialMatchingRows[0], col, val);
+                }
+            }
+        }
+
+        private List<int> GetPotentialMatchesForCell(int row, int col)
+        {
+            if (!CellIsEmpty(row, col))
+            {
+                return new List<int>();
+            }
+
+            var potentialMatches = Enumerable.Range(1, GridSize).ToList(); // These are all the values the cell could be.
+            var potentialMatchesForCell = Enumerable.Range(1, GridSize).ToList(); // We'll try whittling these down until there's only one remaining.
+            foreach (var potentialMatch in potentialMatches)
+            {
+                // If the row or column already has a value it can be removed from the list.
+                if (RowHasNumber(row, potentialMatch) || ColHasNumber(col, potentialMatch))
+                {
+                    potentialMatchesForCell.Remove(potentialMatch);
+                }
+            }
+
+            // If there are any inequalities pointing to the cell and a number on the other side then we can remove the ineligible values.
+            if ((row > 0) && InequalityAboveIsLessThan(row, col))
+            {
+                if (CellIsEmpty(row - 1, col))
+                {
+                    RemoveMatchingLargerValuesFromColumn(col, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row - 1, col];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
+                }
+
+            }
+
+            if ((row > 0) && InequalityAboveIsGreaterThan(row, col))
+            {
+                if (CellIsEmpty(row - 1, col))
+                {
+                    RemoveMatchingSmallerValuesFromColumn(col, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row - 1, col];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
+                }
+            }
+
+            if ((row < MaxIndex) && InequalityBelowIsLessThan(row, col))
+            {
+                if (CellIsEmpty(row + 1, col))
+                {
+                    RemoveMatchingLargerValuesFromColumn(col, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row + 1, col];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
+                }
+            }
+
+            if ((row < MaxIndex) && InequalityBelowIsGreaterThan(row, col))
+            {
+                if (CellIsEmpty(row + 1, col))
+                {
+                    RemoveMatchingSmallerValuesFromColumn(col, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row + 1, col];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
+                }
+            }
+
+            if ((col > 0) && InequalityBeforeIsLessThan(row, col))
+            {
+                if (CellIsEmpty(row, col - 1))
+                {
+                    RemoveMatchingLargerValuesFromRow(row, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row, col - 1];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
+                }
+            }
+
+            if ((col > 0) && InequalityBeforeIsGreaterThan(row, col))
+            {
+                if (CellIsEmpty(row, col - 1))
+                {
+                    RemoveMatchingSmallerValuesFromRow(row, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row, col - 1];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
+                }
+            }
+
+            if ((col < MaxIndex) && InequalityAfterIsLessThan(row, col))
+            {
+                if (CellIsEmpty(row, col + 1))
+                {
+                    RemoveMatchingLargerValuesFromRow(row, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row, col + 1];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n < valueToCompare).ToList();
+                }
+            }
+            if ((col < MaxIndex) && InequalityAfterIsGreaterThan(row, col))
+            {
+                if (CellIsEmpty(row, col + 1))
+                {
+                    RemoveMatchingSmallerValuesFromRow(row, potentialMatchesForCell);
+                }
+                else
+                {
+                    var valueToCompare = Numbers[row, col + 1];
+                    potentialMatchesForCell = potentialMatchesForCell.Where(n => n > valueToCompare).ToList();
+                }
+            }
+            return potentialMatchesForCell;
         }
 
         private void SetCell(int row, int col, int val)
