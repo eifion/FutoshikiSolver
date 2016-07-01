@@ -6,12 +6,14 @@ namespace FutoshikiSolver
     {
         static void Main(string[] args)
         {
-            var grid = new FutoshikiGrid(5, "0050000030000000010000000", "      <   ><>  < < >", "< <  < < <       <  ");           
+            var grid = new FutoshikiGrid(5, "0050000030000000010000000", "      <   ><>  < < >", "<     << <<     <   ");
             grid.Print();
             grid.Solve();
 
-            //Console.WriteLine("After");
-            //grid.Print();
+            Console.WriteLine("After");
+            grid.Print();
+
+            grid.PrintLog();
 
             Console.ReadKey();
         }
